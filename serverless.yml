@@ -1,0 +1,70 @@
+service: serverless-lambda-s3
+
+provider:
+  name: aws
+  runtime: nodejs8.10
+  stage: production
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - s3:*
+      Resource: "*"
+
+functions:
+  processCSV:
+    name: processCSV
+    handler: handler.processCSV
+    events:
+      - s3:
+          bucket: CSV-BUCKET-Alan-CHANGE-ME
+          event: s3:ObjectCreated:*
+          rules:
+            - suffix: .csv
+    environment:
+      FIXED_WIDTH_BUCKET: ${self:resources.Resources.fixedwidth.Properties.BucketName}
+      NODE_ENV: production
+
+resources:
+  Resources:
+    fixedwidth:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: FIXED-WIDTH-BUCKET-Alan-CHANGE-ME
+
+functions:
+  syncHello:
+    handler: handler.syncHello
+    events:
+      - http:
+          path: /hello
+          method: get
+
+functions:
+  asyncHello:
+    handler: handler.asyncHello
+    destinations:
+      onSuccess: otherFunctionInService
+      onFailure: arn:aws:sns:us-east-1:xxxx:some-topic-name
+  asyncGoodBye:
+    handler: handler.asyncGoodBye
+    destinations:
+      onFailure:
+        # For the case using CF intrinsic function for `arn`, to ensure target execution permission exactly, you have to specify `type` from 'sns', 'sqs', 'eventBus', 'function'.
+        type: sns
+        arn:
+          Ref: SomeTopicName
+functions:
+  asyncHello:
+    handler: handler.asyncHello
+    destinations:
+      onSuccess: otherFunctionInService
+      onFailure: arn:aws:sns:us-east-1:xxxx:some-topic-name
+  asyncGoodBye:
+    handler: handler.asyncGoodBye
+    destinations:
+      onFailure:
+        # For the case using CF intrinsic function for `arn`, to ensure target execution permission exactly, you have to specify `type` from 'sns', 'sqs', 'eventBus', 'function'.
+        type: sns
+        arn:
+          Ref: SomeTopicName
+          
